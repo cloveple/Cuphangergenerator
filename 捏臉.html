@@ -1,0 +1,653 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>杯緣子產生器</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: sans-serif;
+  background: #f5f6fa;
+  color: #333;
+}
+
+h1, h2, p {
+  text-align: center;
+}
+
+h1 {
+  font-size: 26px;
+}
+
+h2 {
+  font-size: 20px;
+  margin-top: 0;
+}
+
+.app {
+  max-width: 1100px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.panel {
+  min-width: 0;
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 3px 12px #0000000c;
+}
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+button:focus-visible {
+  outline: 3px solid #a9a0ff;
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.category {
+  background: #eeeef5;
+}
+
+.category.active {
+  background: #6558d3;
+  color: white;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.item {
+  min-width: 0;
+  overflow: hidden;
+  border: 2px solid #eee;
+  border-radius: 10px;
+  padding: 6px;
+  background: white;
+}
+
+.item:hover {
+  border-color: #b9b2f3;
+}
+
+.item.selected {
+  border-color: #6558d3;
+  background: #f0efff;
+}
+
+.item img {
+  display: block;
+  width: 100%;
+  height: 105px;
+  object-fit: contain;
+}
+
+.item span {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  padding: 5px 0;
+  overflow-wrap: anywhere;
+}
+
+.preview {
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1;
+  margin: 0 auto 16px;
+  border: 1px solid #e4e4e4;
+  border-radius: 12px;
+  background-color: white;
+  background-image:
+    linear-gradient(45deg, #f1f1f1 25%, transparent 25%),
+    linear-gradient(-45deg, #f1f1f1 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f1f1f1 75%),
+    linear-gradient(-45deg, transparent 75%, #f1f1f1 75%);
+  background-size: 20px 20px;
+  background-position:
+    0 0, 0 10px, 10px -10px, -10px 0;
+  overflow: hidden;
+}
+
+.preview svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.primary {
+  background: #6558d3;
+  color: white;
+}
+
+.primary:hover {
+  background: #5145bd;
+}
+
+.secondary {
+  background: #ececf3;
+  color: #333;
+}
+
+.secondary:hover {
+  background: #dedeea;
+}
+
+.status {
+  font-size: 13px;
+  color: #666;
+  text-align: center;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  padding: 25px 5px;
+  text-align: center;
+  color: #888;
+}
+
+.missing {
+  display: flex;
+  min-height: 105px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  color: #999;
+  font-size: 12px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  background: #f7f7fa;
+  border-radius: 6px;
+}
+
+@media (max-width: 720px) {
+  body {
+    padding: 12px;
+  }
+
+  .app {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎨 杯緣子產生器</h1>
+<p>挑選喜歡的素材，組合專屬角色！</p>
+
+<div class="app">
+
+  <!-- 左側素材選擇區 -->
+  <section class="panel">
+    <h2>① 選擇圖片素材</h2>
+
+    <div class="categories" id="categories"></div>
+
+    <div class="gallery" id="gallery"></div>
+
+    <p class="status" id="assetStatus">
+      正在載入素材...
+    </p>
+  </section>
+
+  <!-- 右側角色預覽區 -->
+  <section class="panel">
+    <h2>② 我的角色</h2>
+
+    <div class="preview">
+      <svg
+        id="canvas"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 300 300"
+        role="img"
+        aria-label="目前組合的角色">
+      </svg>
+    </div>
+
+    <div class="actions">
+      <button
+        type="button"
+        class="secondary"
+        id="resetButton">
+        重新組合
+      </button>
+
+      <button
+        type="button"
+        class="primary"
+        id="downloadButton">
+        下載 SVG 向量檔
+      </button>
+    </div>
+
+    <p class="status" id="status">
+      請從左側選擇圖片素材
+    </p>
+  </section>
+
+</div>
+
+<script>
+// ==========================================
+// 1. 部位與素材數量設定
+// ==========================================
+
+const PARTS = [
+  {
+    id: "pose",
+    category: "姿勢",
+    folder: "pose",
+    prefix: "pose",
+    count: 3
+  },
+  {
+    id: "bangs",
+    category: "瀏海",
+    folder: "bangs",
+    prefix: "bangs",
+    count: 10
+  },
+  {
+    id: "backhair",
+    category: "後髮",
+    folder: "backhair",
+    prefix: "backhair",
+    count: 12
+  },
+  {
+    id: "accessories",
+    category: "飾品",
+    folder: "accessories",
+    prefix: "accessories",
+    count: 2
+  },
+  {
+    id: "clothes",
+    category: "衣服",
+    folder: "clothes",
+    prefix: "clothes",
+    count: 5
+  }
+];
+
+// ==========================================
+// 2. 圖層順序：由底層到上層
+// ==========================================
+
+const LAYER_ORDER = [
+  "姿勢",
+  "後髮",
+  "衣服",
+  "瀏海",
+  "飾品"
+];
+
+// ==========================================
+// 3. 自動建立全部素材
+// ==========================================
+
+const ASSETS = PARTS.flatMap(part =>
+  Array.from({ length: part.count }, (_, index) => {
+    const number = index + 1;
+
+    return {
+      id: `${part.id}_${number}`,
+      category: part.category,
+      name: `${part.prefix}_${number}`,
+      path: `assets/${part.folder}/${part.prefix}_${number}.png`,
+      x: 0,
+      y: 0,
+      width: 300,
+      height: 300
+    };
+  })
+);
+
+// 預設顯示的分類
+let currentCategory = "姿勢";
+
+// 儲存已選取的素材
+let selected = {};
+
+// ==========================================
+// 4. 取得所有分類
+// ==========================================
+
+function getCategories() {
+  return PARTS.map(part => part.category);
+}
+
+// ==========================================
+// 5. 顯示分類按鈕
+// ==========================================
+
+function renderCategories() {
+  const root = document.getElementById("categories");
+  root.replaceChildren();
+
+  getCategories().forEach(category => {
+    const btn = document.createElement("button");
+
+    btn.type = "button";
+    btn.className =
+      "category" +
+      (category === currentCategory ? " active" : "");
+
+    btn.textContent = category;
+    btn.setAttribute(
+      "aria-pressed",
+      String(category === currentCategory)
+    );
+
+    btn.addEventListener("click", () => {
+      currentCategory = category;
+
+      renderCategories();
+      renderGallery();
+    });
+
+    root.appendChild(btn);
+  });
+}
+
+// ==========================================
+// 6. 顯示素材圖片
+// ==========================================
+
+function renderGallery() {
+  const gallery = document.getElementById("gallery");
+  gallery.replaceChildren();
+
+  const items = ASSETS.filter(
+    asset => asset.category === currentCategory
+  );
+
+  if (items.length === 0) {
+    const empty = document.createElement("div");
+
+    empty.className = "empty";
+    empty.textContent = "此分類尚未加入圖片素材";
+
+    gallery.appendChild(empty);
+    return;
+  }
+
+  items.forEach(asset => {
+    const card = document.createElement("button");
+
+    card.type = "button";
+    card.className =
+      "item" +
+      (selected[asset.category] === asset.id
+        ? " selected"
+        : "");
+
+    card.setAttribute(
+      "aria-pressed",
+      String(selected[asset.category] === asset.id)
+    );
+
+    const img = document.createElement("img");
+
+    img.src = asset.path;
+    img.alt = asset.name;
+    img.loading = "lazy";
+
+    const label = document.createElement("span");
+    label.textContent = asset.name;
+
+    img.addEventListener("error", () => {
+      img.style.display = "none";
+
+      if (!card.querySelector(".missing")) {
+        const missing = document.createElement("div");
+
+        missing.className = "missing";
+        missing.textContent = "找不到圖片，請檢查檔名";
+
+        card.insertBefore(missing, label);
+      }
+    }, { once: true });
+
+    card.append(img, label);
+
+    card.addEventListener("click", () => {
+      selected[asset.category] = asset.id;
+
+      renderGallery();
+      drawCharacter();
+    });
+
+    gallery.appendChild(card);
+  });
+
+  document.getElementById("assetStatus").textContent =
+    `${currentCategory}：共 ${items.length} 張素材`;
+}
+
+// ==========================================
+// 7. 將圖片加入 SVG
+// ==========================================
+
+function appendAssetToSVG(svg, asset) {
+  const image = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "image"
+  );
+
+  image.setAttribute("href", asset.path);
+  image.setAttribute("x", asset.x);
+  image.setAttribute("y", asset.y);
+  image.setAttribute("width", asset.width);
+  image.setAttribute("height", asset.height);
+  image.setAttribute("preserveAspectRatio", "none");
+  image.setAttribute("data-asset-id", asset.id);
+
+  svg.appendChild(image);
+}
+
+// ==========================================
+// 8. 繪製角色
+// ==========================================
+
+function drawCharacter() {
+  const svg = document.getElementById("canvas");
+
+  svg.replaceChildren();
+
+  LAYER_ORDER.forEach(category => {
+    const asset = ASSETS.find(
+      item => item.id === selected[category]
+    );
+
+    if (!asset) return;
+
+    appendAssetToSVG(svg, asset);
+  });
+
+  const count = Object.keys(selected).length;
+
+  document.getElementById("status").textContent =
+    count === 0
+      ? "請從左側選擇圖片素材"
+      : `已選擇 ${count} / ${PARTS.length} 個部位`;
+}
+
+// ==========================================
+// 9. 重新組合
+// ==========================================
+
+function resetCharacter() {
+  selected = {};
+
+  drawCharacter();
+  renderGallery();
+}
+
+// ==========================================
+// 10. 下載獨立 SVG 向量檔
+// ==========================================
+
+async function downloadSVG() {
+  const original = document.getElementById("canvas");
+
+  if (original.children.length === 0) {
+    alert("請先選擇圖片素材，再下載角色！");
+    return;
+  }
+
+  const button = document.getElementById("downloadButton");
+
+  button.disabled = true;
+  button.textContent = "正在準備下載...";
+
+  try {
+    const svg = original.cloneNode(true);
+    const images = [...svg.querySelectorAll("image")];
+
+    // 把每張 PNG 轉為 data URL
+    for (const image of images) {
+      const path = image.getAttribute("href");
+
+      if (!path || path.startsWith("data:")) {
+        continue;
+      }
+
+      const response = await fetch(path);
+
+      if (!response.ok) {
+        throw new Error("無法讀取素材：" + path);
+      }
+
+      const blob = await response.blob();
+
+      const dataURL = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(
+          new Error("圖片轉換失敗：" + path)
+        );
+
+        reader.readAsDataURL(blob);
+      });
+
+      image.setAttribute("href", dataURL);
+    }
+
+    svg.setAttribute(
+      "xmlns",
+      "http://www.w3.org/2000/svg"
+    );
+
+    svg.setAttribute("width", "300");
+    svg.setAttribute("height", "300");
+    svg.setAttribute("viewBox", "0 0 300 300");
+
+    const source = new XMLSerializer().serializeToString(svg);
+
+    const blob = new Blob(
+      [source],
+      { type: "image/svg+xml;charset=utf-8" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "我的創意捏臉.svg";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    document.getElementById("status").textContent =
+      "SVG 已下載！";
+
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      "下載失敗！請確認素材圖片存在，" +
+      "並透過本機網站伺服器開啟網頁。"
+    );
+
+  } finally {
+    button.disabled = false;
+    button.textContent = "下載 SVG 向量檔";
+  }
+}
+
+// ==========================================
+// 11. 初始化
+// ==========================================
+
+document
+  .getElementById("resetButton")
+  .addEventListener("click", resetCharacter);
+
+document
+  .getElementById("downloadButton")
+  .addEventListener("click", downloadSVG);
+
+renderCategories();
+renderGallery();
+drawCharacter();
+</script>
+
+</body>
+</html>
